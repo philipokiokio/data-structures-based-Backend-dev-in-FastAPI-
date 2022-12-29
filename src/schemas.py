@@ -6,3 +6,9 @@ class UserCreate(BaseModel):
     email:EmailStr
     address:str
     phone: constr(max_length=11, min_length=10) 
+
+
+class BlogCreate(BaseModel):
+    title:str
+    body:str
+    

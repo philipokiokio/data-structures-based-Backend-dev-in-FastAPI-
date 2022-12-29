@@ -1,10 +1,12 @@
-from fastapi import FastAPI,status, Depends
+from fastapi import FastAPI,status, Depends, HTTPException
 from src.database import engine, get_db
-from src.models import Base, User
-from src.schemas import UserCreate
+from src.models import Base, User, BlogPost
+from src.schemas import UserCreate, BlogCreate
 from sqlalchemy.orm import Session
 from src.linked_list import LinkedList
 from fastapi.encoders import jsonable_encoder
+from src.hash_table import HashTable
+from datetime import datetime
 
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
@@ -100,11 +102,38 @@ def delete_user(user_id:int, db:Session = Depends(get_db)):
     }
 
 
+@app.post("/blog/{user_id}",status_code= status.HTTP_201_CREATED)
+def create_blog_post(user_id:int,blog_create:BlogCreate, db:Session= Depends(get_db)):
 
-@app.post("/blog/{user_id}")
-def create_blog_post():
-    pass
+    user_check = db.query(User).filter(User.id == user_id).first()
+    if not user_check:
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail= "User does not exist"
+        )
 
+    ht  = HashTable(10)
+    ht.add_key_value("title", blog_create.title)
+    ht.add_key_value("body", blog_create.body)
+    ht.add_key_value("date", datetime.now().date())
+    ht.add_key_value("user_id", user_check.id)
+
+    # ht.print_table()
+
+
+    new_blog = BlogPost(title= ht.get_value("title"), body= ht.get_value("body"),
+                        date= ht.get_value("date"), user_id = ht.get_value("user_id"))
+
+
+
+    db.add(new_blog)
+    db.commit()
+    db.refresh(new_blog)
+    return {
+        "message": "New blog post created",
+        "data": new_blog,
+        "status": status.HTTP_201_CREATED
+    }
 
 
 
